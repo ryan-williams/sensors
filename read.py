@@ -1,5 +1,6 @@
 import board
 import busio
+from datetime import datetime
 from time import sleep
 
 import argparse
@@ -24,7 +25,7 @@ else:
 interval = args.interval
 
 def loop():
-     print("temp: %0.1f C, humidity: %0.1f" % (sensor.temperature, sensor.relative_humidity))
+     print("time: %s, temp: %0.1f C, humidity: %0.1f" % (datetime.now().strftime('%Y/%m/%d %H:%M:%S'), sensor.temperature, sensor.relative_humidity))
      sleep(interval)
 
 n = args.n
