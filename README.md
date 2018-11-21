@@ -222,6 +222,10 @@ In `/etc/grafana/grafana.ini`:
 ;org_role = Viewer
 ```
 
+## Roadmap
+
+[The issue tracker](https://github.com/ryan-williams/sensors/issues) points to a lot of future work.
+
 
 [InfluxDB]: https://github.com/influxdata/influxdb
 [Grafana]: https://grafana.com/
