@@ -4,6 +4,8 @@ Scratch repo with work I've done to monitor the temperature and humidity in my a
 
 [![](https://cl.ly/77642052ea2c/Screen%20Shot%202018-11-21%20at%202.14.24%20PM.png)](http://boodoir.runsascoded.com)
 
+The sawtooths are where the heater turned on / ran. Can you see where someone took a shower? 😂
+
 ## Background
 
 Most people don't understand that warmer air is less humid, even if it has the same amount of water in it; warmer air can hold more water, so it is "thirstier", and more prone to stealing water from e.g. your skin.
