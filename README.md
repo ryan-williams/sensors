@@ -77,11 +77,11 @@ These env vars will be used at various points:
 
   cd /Volumes/boot
 
-  SSID= # your wifi SSID; 2.4GHz only!
-  PSWD= # your wifi password
-
   # enable sshd on boot
   touch ssh
+
+  SSID= # your wifi SSID; 2.4GHz only!
+   PSWD= # your wifi password
 
   # enable uart, i2c interfaces
   cat >> config.txt <<EOF
@@ -105,15 +105,12 @@ These env vars will be used at various points:
 
 </p></details>
 
-<details><summary><b>2. power on raspberry pi; set `$RPI_IP` to local WLAN IP address</b></summary><p>
+<details><summary><b>2. power on raspberry pi; set <code>$RPI_IP</code> to local WLAN IP address</b></summary><p>
 
-Once it's booted, find its IP address and store it in `$RPI_IP` for what follows.
-  
-You can get this from e.g. your wifi router (which it will connect to on boot), or via a serial interface.
-
-Also set these env vars:
-- `$RPI`: a hostname/alias you will address this RPi as
-- `$DEVICE`: an identifier it will report its metrics to InfluxDB under
+Once it's booted:
+- find its IP address and store it in `$RPI_IP` for what follows.
+  - (you can get this from e.g. your wifi router (which it will connect to on boot), or via a serial interface)
+- also set `$RPI`: a hostname/alias you will address this RPi as
 
 </p></details>
 
@@ -130,26 +127,13 @@ EOF
 
 # enable passwordless ssh; only two times you'll have to enter the default password ("raspberry")
 scp ~/.ssh/$SSH_PUBKEY $RPI:
-scp read.py $RPI:
 ssh $RPI 'mkdir .ssh && cat $SSH_PUBKEY >> .ssh/authorized_keys'
 
-# write "temps.service" file
-cat >temps.service <<EOF
-[Unit]
-Description=Temp/Humidity Reporter
-After=multi-user.target
+# (passwordless!) copy over source file from this repo
+scp read.py $RPI:
 
-[Service]
-Type=idle
-ExecStart=/usr/bin/python3 -u /home/pi/read.py -d ${DEVICE:-$RPI}
-
-[Install]
-WantedBy=multi-user.target
-EOF
-
-# install "temps.service" on rpi and set it to run at boot
-scp temps.service $RPI: && rm -f temps.service
-ssh $RPI "sudo mv temps.service /lib/systemd/system/ && sudo systemctl enable temps"
+# set hostname
+ssh $RPI "sudo echo $RPI > /etc/hostname"
 
 # passwordless!
 ssh $RPI
@@ -160,16 +144,42 @@ ssh $RPI
 <details><summary><b>4. configure rpi</b></summary><p>
 
 ```bash
-# interactively set hostname, admin password, locale, etc.; TODO: automate
-sudo raspi-config
+# set new password for 'pi' user
+passwd
+
+# remove obsolete local hostname alias
+sudo perl -pi -e "s/raspberrypi/$HOSTNAME/" /etc/hosts
+
+sudo apt-get install i2c-tools
+sudo echo i2c-dev >> /etc/modules
 
 # install necessary python deps
-sudo pip3 install adafruit-circuitpython-HTU21D adafruit-circuitpython-si7021 influxdb pytz
+sudo pip3 install RPi.GPIO adafruit-circuitpython-HTU21D adafruit-circuitpython-si7021 influxdb pytz
 
 # optional: useful cruft removal
 sudo apt-get purge wolfram-engine libreoffice* scratch minecraft-pi sonic-pi dillo gpicview oracle-java8-jdk openjdk-7-jre oracle-java7-jdk openjdk-8-jre
 sudo apt-get clean
 sudo apt-get autoremove
+
+# set this var to be the device you want to report metrics to InfluxDB as
+DEVICE=$HOSTNAME
+
+# write "temps.service" file
+sudo bash -c "cat >/lib/systemd/system/temps.service" <<EOF
+[Unit]
+Description=Temp/Humidity Reporter
+After=multi-user.target
+
+[Service]
+Type=idle
+ExecStart=/usr/bin/python3 -u /home/pi/read.py -d $DEVICE
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
+sudo systemctl daemon-reload
+sudo systemctl enable temps
 
 # start the temps service!
 sudo systemctl start temps
