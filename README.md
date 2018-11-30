@@ -4,7 +4,7 @@ Scratch repo with work I've done to monitor the temperature and humidity in my a
 
 [![](https://cl.ly/77642052ea2c/Screen%20Shot%202018-11-21%20at%202.14.24%20PM.png)](https://boodoir.runsascoded.com)
 
-The sawtooths are where the heater turned on / ran. Can you see where someone took a shower? 😂
+The sawteeth are where the heater turned on / ran. Can you see where someone took a shower? 😂
 
 ## Background
 
