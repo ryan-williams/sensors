@@ -132,8 +132,18 @@ ssh $RPI 'mkdir .ssh && cat $SSH_PUBKEY >> .ssh/authorized_keys'
 # (passwordless!) copy over source file from this repo
 scp read.py $RPI:
 
-# set hostname
-ssh $RPI "sudo echo $RPI > /etc/hostname"
+# set hostname, locale
+cat >setup <<EOF
+echo $RPI > /etc/hostname
+perl -pi -e "s/raspberrypi/$RPI/" /etc/hosts
+echo "LC_ALL=en_US.UTF-8" >> /etc/environment
+echo "en_US.UTF-8 UTF-8" >> /etc/locale.gen
+echo "LANG=en_US.UTF-8" > /etc/locale.conf
+locale-gen en_US.UTF-8
+EOF
+chmod a+x setup
+scp setup $RPI: && rm -f setup
+ssh $RPI "sudo ./setup && rm -f setup"
 
 # passwordless!
 ssh $RPI
