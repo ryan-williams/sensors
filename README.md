@@ -173,6 +173,8 @@ sudo apt-get autoremove
 
 # set this var to be the device you want to report metrics to InfluxDB as
 DEVICE=$HOSTNAME
+# set this to the hostname (and optionally port) of the InfluxDB server
+SERVER= 
 
 # write "temps.service" file
 sudo bash -c "cat >/lib/systemd/system/temps.service" <<EOF
@@ -182,7 +184,7 @@ After=multi-user.target
 
 [Service]
 Type=idle
-ExecStart=/usr/bin/python3 -u /home/pi/read.py -d $DEVICE
+ExecStart=/usr/bin/python3 -u /home/pi/read.py -d $DEVICE -s $SERVER
 
 [Install]
 WantedBy=multi-user.target
