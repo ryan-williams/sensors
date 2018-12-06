@@ -1,0 +1,6 @@
+RPi.GPIO
+adafruit-circuitpython-HTU21D
+adafruit-circuitpython-si7021
+influxdb
+pytz
+dotmap

@@ -1,29 +1,75 @@
+import argparse
 import board
 import busio
 from datetime import datetime
+from dotmap import DotMap
+from os.path import exists
+from pprint import pformat
 from pytz import timezone
 from socket import gethostname
 from sys import stderr
 from time import sleep
+from urllib.parse import urlparse
 
 from influxdb import InfluxDBClient
 
-import argparse
+
 parser = argparse.ArgumentParser()
 
-parser.add_argument('--si7', default=False, action='store_true', help='Read from SI7021 sensor; default: HTU21D')
-parser.add_argument('n', default=0, nargs='?', type=int, help='Number of iterations to run for; default: 0 (⟹infinite)')
-parser.add_argument('--hist', dest='hist_interval', default=60, type=int, help='Sleep interval between printing points-per-server-request histograms, in seconds')
-parser.add_argument('-i', '--interval', default=1, type=int, help='Sleep interval between polls, in seconds')
-parser.add_argument('-r', '--report-interval', default=1, type=int, help='Sleep interval between reporting points to server, in seconds')
-parser.add_argument('-d', '--device', default=gethostname(), help='Device ID')
-parser.add_argument('--db', default='temps', help='Database to log metrics to, inside the InfluxDB instance given by --server')
-parser.add_argument('-s', '--server', default='raspberrypi:8086', help='InfluxDB server to log metrics to')
-parser.add_argument('-n', '--dry-run', default=False, action='store_true', help='When set, only log output, but don\'t report to a database')
+parser.add_argument('--si7', action='store_true', help='Read from SI7021 sensor; default: HTU21D')
+parser.add_argument('n', nargs='?', type=int, help='Number of iterations to run for; default: 0 (⟹infinite)')
+parser.add_argument('--hist', dest='hist_interval', type=int, help='Sleep interval between printing points-per-server-request histograms, in seconds')
+parser.add_argument('-c', '--create-db', dest='create_db', action='store_true', help='When set, attempt to create the database (--db) at startup')
+parser.add_argument('-f', '--file', type=str, help='Config file to read values from')
+parser.add_argument('-i', '--interval', type=int, help='Sleep interval between polls, in seconds')
+parser.add_argument('-r', '--report-interval', type=int, help='Sleep interval between reporting points to server, in seconds')
+parser.add_argument('-d', '--device', help='Device ID')
+parser.add_argument('--db', help='Database to log metrics to, inside the InfluxDB instance given by --server')
+parser.add_argument('-s', '--server', help='InfluxDB server to log metrics to')
+parser.add_argument('-n', '--dry-run', action='store_true', help='When set, only log output, but don\'t report to a database')
 
-args = parser.parse_args()
+args_dict = vars(parser.parse_args())
 
-from urllib.parse import urlparse
+args = DotMap({
+	'create_db': False,
+  'db': 'temps',
+  'device': gethostname(),
+  'dry_run': False,
+	'file': '/etc/temps/config.json',
+  'hist_interval': 60,
+	'interval': 1,
+  'n': 0,
+	'report_interval': 1,
+	'report_interval_backoff': 1.2,
+	'report_interval_max': 300,
+	'server': 'localhost:8086',
+  'si7': False,
+  'tags': []
+})
+
+
+def update(ctx, base, delta):
+	for k, v in delta.items():
+		if v == None or v == False:
+			continue
+		if not k in base:
+			raise IOError('Invalid config key "%s": %s' % (k, json.dumps(delta)))
+		print('setting from %s: %s → %s' % (ctx, k, v))
+		base[k] = v
+
+
+file = args.file
+if exists(file):
+	import json
+	with open(file, 'r') as f:
+		file_config = json.load(f)
+		update(file, args, file_config)
+
+
+update('command-line', args, args_dict)
+
+
+print('config:\n%s' % pformat(args, indent=2))
 
 device = args.device
 dry_run = args.dry_run
@@ -112,12 +158,16 @@ def influx_writer():
 	def make_client():
 		return InfluxDBClient(
 		host = server.hostname,
-		port = server.port,
+		port = server.port if server.port else 8086,
 		username = server.username,
 		password = server.password,
 		database = args.db
 	)
 	client = make_client()
+
+	if args.create_db:
+		client.create_database(args.db)
+		print('Made database %s' % args.db)
 
 	while running:
 		points = drain(q)
@@ -171,7 +221,7 @@ def points_size_hist_printer():
 			return ' '.join([ '%dx%d' % (k, v) for k, v in items ])
 
 		print(
-			'%d reported points per request: recent %s, all time %s' % (
+			'%d reported points: recent %s, all time %s' % (
 				n,
 				hist_str(cur),
 				hist_str(hist)

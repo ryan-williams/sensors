@@ -130,7 +130,7 @@ scp ~/.ssh/$SSH_PUBKEY $RPI:
 ssh $RPI 'mkdir .ssh && cat $SSH_PUBKEY >> .ssh/authorized_keys'
 
 # (passwordless!) copy over source file from this repo
-scp read.py $RPI:
+scp read.py requirements.txt $RPI:
 
 # set hostname, locale
 cat >setup <<EOF
@@ -164,12 +164,7 @@ sudo apt-get install i2c-tools
 sudo echo i2c-dev >> /etc/modules
 
 # install necessary python deps
-sudo pip3 install RPi.GPIO adafruit-circuitpython-HTU21D adafruit-circuitpython-si7021 influxdb pytz
-
-# optional: useful cruft removal
-sudo apt-get purge wolfram-engine libreoffice* scratch minecraft-pi sonic-pi dillo gpicview oracle-java8-jdk openjdk-7-jre oracle-java7-jdk openjdk-8-jre
-sudo apt-get clean
-sudo apt-get autoremove
+sudo pip3 install -r requirements.txt
 
 # set this var to be the device you want to report metrics to InfluxDB as
 DEVICE=$HOSTNAME
@@ -184,10 +179,18 @@ After=multi-user.target
 
 [Service]
 Type=idle
-ExecStart=/usr/bin/python3 -u /home/pi/read.py -d $DEVICE -s $SERVER
+ExecStart=/usr/bin/python3 -u /home/pi/read.py
 
 [Install]
 WantedBy=multi-user.target
+EOF
+
+sudo mkdir /etc/temps
+sudo bash -c "cat >/etc/temps/config.json" <<EOF
+{
+  "device": "$DEVICE",
+  "server": "$SERVER"
+}
 EOF
 
 sudo systemctl daemon-reload
