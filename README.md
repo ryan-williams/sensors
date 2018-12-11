@@ -155,10 +155,13 @@ ssh $RPI
 
 ```bash
 # set new password for 'pi' user
-passwd
+sudo passwd pi
 
 # remove obsolete local hostname alias
 sudo perl -pi -e "s/raspberrypi/$HOSTNAME/" /etc/hosts
+
+# disable password login via SSH; require key that was installed above
+sudo bash -c "echo 'PasswordAuthentication no' >> /etc/ssh/sshd_config"
 
 sudo apt-get install i2c-tools
 sudo echo i2c-dev >> /etc/modules
@@ -212,10 +215,14 @@ exit
 
 <details><summary><b>InfluxDB</b></summary><p>
 
-…is easily installed via APT:
+[From the Influx docs](https://docs.influxdata.com/influxdb/v1.7/introduction/installation/):
 
 ```bash
-sudo apt-get install influxdb
+curl -sL https://repos.influxdata.com/influxdb.key | sudo apt-key add -
+source /etc/os-release
+echo "deb https://repos.influxdata.com/debian stretch stable" | sudo tee /etc/apt/sources.list.d/influxdb.list
+sudo apt-get update && sudo apt-get install influxdb influxdb-client
+sudo service influxdb start
 ```
 
 </p></details>
@@ -225,8 +232,8 @@ sudo apt-get install influxdb
 …is [a little trickier](https://grafana.com/grafana/download?platform=arm):
 
 ```bash
-wget https://s3-us-west-2.amazonaws.com/grafana-releases/release/grafana_5.3.4_armhf.deb 
-sudo dpkg -i grafana_5.3.4_armhf.deb
+wget https://s3-us-west-2.amazonaws.com/grafana-releases/release/grafana_5.4.0_armhf.deb
+sudo dpkg -i grafana_5.4.0_armhf.deb
 ```
 
 *The version you get from a vanilla `sudo apt-get install grafana` is really old! Don't try to use it!*
